@@ -12,13 +12,22 @@
       <img class="brand-logo" src="assets/logo-fk.png" alt="Force Knight">
       <p class="eyebrow">Pusat kontrol bot</p>
       <h1>Master Data Fuuka</h1>
-      <p class="muted">Kelola data buff dan buffland dengan aman dari satu tempat.</p>
-      <form id="login-form" autocomplete="off">
+      <p class="tagline">Buktikan Kalau Kamu Adalah Member Force Knight</p>
+      <form id="login-form" autocomplete="off" novalidate>
         <label for="pin">PIN</label>
-        <input id="pin" type="password" inputmode="numeric" autocomplete="current-password" required>
-        <button type="submit" class="primary" id="login-btn">Masuk</button>
+        <div class="pin-field">
+          <input id="pin" type="password" autocomplete="current-password" autocapitalize="none" spellcheck="false" required aria-describedby="login-msg login-hint">
+          <button type="button" id="pin-toggle" class="pin-toggle" aria-pressed="false" aria-label="Tampilkan PIN">Tampilkan</button>
+        </div>
+        <button type="submit" class="primary" id="login-btn"><span class="spinner" id="login-spinner" hidden></span><span id="login-btn-text">Masuk</span></button>
       </form>
-      <p id="login-msg" class="msg" role="status" aria-live="polite"></p>
+      <p id="login-msg" class="msg" role="alert"></p>
+      <p id="login-hint" class="muted login-hint">Salah PIN 5 kali berturut-turut mengunci login selama 10 menit.</p>
+    </section>
+
+    <section id="loading" class="loading-screen" role="status" aria-live="polite" hidden>
+      <span class="spinner big" aria-hidden="true"></span>
+      <p>Memuat data…</p>
     </section>
 
     <section id="editor" hidden>
@@ -37,17 +46,17 @@
           <h2 id="page-title">Kode buff</h2>
           <p id="page-help" class="muted">Atur nama buff dan kode yang digunakan bot.</p>
         </div>
-        <div class="stat" aria-live="polite"><strong id="item-count">0</strong><span id="item-label">kelompok buff</span></div>
       </div>
       <nav id="tabs" class="tabs" role="tablist" aria-label="Topik"></nav>
       <div class="grid">
         <div class="card editor-card">
           <div id="form"></div>
-          <div class="actions">
-            <button type="button" id="save" class="primary">Simpan</button>
-            <span id="dirty" class="muted" hidden>Belum disimpan</span>
-          </div>
           <p id="msg" class="msg" role="status" aria-live="polite"></p>
+          <div class="actions" id="actions">
+            <span id="dirty" class="dirty-text">Semua perubahan tersimpan</span>
+            <button type="button" id="discard" class="ghost" hidden>Batalkan</button>
+            <button type="button" id="save" class="primary" disabled>Simpan</button>
+          </div>
         </div>
         <aside class="card preview-card">
           <div class="section-heading">
@@ -55,7 +64,10 @@
               <p class="eyebrow">Tampilan akhir</p>
               <h2>Preview pesan WA</h2>
             </div>
-            <span class="live-dot">Live</span>
+            <div class="preview-tools">
+              <span class="live-dot">Live</span>
+              <button type="button" id="copy" class="copy-btn">Salin</button>
+            </div>
           </div>
           <p class="muted preview-help">Preview berubah otomatis saat data diedit.</p>
           <pre id="preview" class="preview"></pre>
@@ -63,6 +75,7 @@
       </div>
     </section>
   </main>
+  <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
 
   <script src="config.js"></script>
   <script src="lib/buffText.js"></script>

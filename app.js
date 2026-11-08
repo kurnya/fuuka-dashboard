@@ -14,7 +14,9 @@
   const $ = (id) => document.getElementById(id);
 
   // buff disimpan sebagai kelompok [{nama, kode:[...]}], buffland sebagai baris [{label, nama}].
-  const state = { pin: "", tab: TABS[0].id, data: {}, dirty: {}, busy: false };
+  // orig menyimpan salinan data terakhir dari server, dipakai untuk mendeteksi perubahan dan membatalkan.
+  const state = { pin: "", tab: TABS[0].id, data: {}, orig: {}, submitted: false, busy: false };
+  let fieldSeq = 0;
 
   function h(tag, attrs, ...children) {
     const el = document.createElement(tag);
@@ -53,12 +55,17 @@
 
   function load(tab, rows) {
     state.data[tab] = tab === "buff" ? toGroups(rows) : rows.map((r) => ({ label: r.label, nama: r.nama }));
-    state.dirty[tab] = false;
+    state.orig[tab] = JSON.stringify(state.data[tab]);
+  }
+
+  function isDirty(tab) {
+    return state.data[tab] !== undefined && JSON.stringify(state.data[tab]) !== state.orig[tab];
   }
 
   // ---- tampilan ----
   function show(which) {
     $("login").hidden = which !== "login";
+    $("loading").hidden = which !== "loading";
     $("editor").hidden = which !== "editor";
   }
 
@@ -67,10 +74,36 @@
     el.className = "msg" + (kind ? " " + kind : "");
   }
 
+  let toastTimer;
+  function clearToast() {
+    clearTimeout(toastTimer);
+    $("toasts").replaceChildren();
+  }
+
+  function toast(text, opts = {}) {
+    clearTimeout(toastTimer);
+    const kids = [h("span", {}, text)];
+    if (opts.action) {
+      kids.push(h("button", { type: "button", class: "toast-action", onclick: () => { clearToast(); opts.onAction(); } }, opts.action));
+    }
+    $("toasts").replaceChildren(h("div", { class: "toast" + (opts.kind ? " " + opts.kind : "") }, ...kids));
+    toastTimer = setTimeout(clearToast, opts.ms || 4000);
+  }
+
+  function refreshDirty() {
+    const dirty = isDirty(state.tab);
+    const label = $("dirty");
+    label.textContent = dirty ? "Perubahan belum disimpan" : "Semua perubahan tersimpan";
+    label.classList.toggle("unsaved", dirty);
+    $("discard").hidden = !dirty;
+    if (!dirty) resetDiscard();
+    $("save").disabled = state.busy || !dirty;
+    document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("changed", isDirty(t.dataset.tab)));
+  }
+
   function markDirty() {
-    state.dirty[state.tab] = true;
-    $("dirty").hidden = false;
     setMsg($("msg"), "");
+    refreshDirty();
   }
 
   function updatePreview() {
@@ -81,13 +114,10 @@
 
   function updatePageInfo() {
     const isBuff = state.tab === "buff";
-    const count = isBuff ? state.data.buff.length : state.data.buffland.length;
     $("page-title").textContent = isBuff ? "Kode buff" : "Code buffland";
     $("page-help").textContent = isBuff
       ? "Atur nama buff dan kode yang digunakan bot."
       : "Atur label dan nama untuk blok code buffland.";
-    $("item-count").textContent = count;
-    $("item-label").textContent = isBuff ? "kelompok buff" : "baris buffland";
   }
 
   function move(arr, i, d) {
@@ -96,25 +126,73 @@
     [arr[i], arr[j]] = [arr[j], arr[i]];
   }
 
+  // Hapus satu item lalu tawarkan "Urungkan" lewat toast.
+  function removeWithUndo(arr, idx, label) {
+    const [item] = arr.splice(idx, 1);
+    markDirty();
+    render();
+    toast(label, { action: "Urungkan", ms: 6000, onAction: () => { arr.splice(idx, 0, item); markDirty(); render(); } });
+  }
+
   function iconBtn(label, text, onclick, extra) {
     return h("button", { type: "button", class: "icon" + (extra ? " " + extra : ""), "aria-label": label, title: label, onclick }, text);
   }
 
-  function textInput(value, placeholder, label, oninput, extra) {
-    return h("input", { type: "text", value, placeholder, "aria-label": label, oninput, class: extra || false });
+  function textInput(value, placeholder, label, oninput) {
+    return h("input", { type: "text", value, placeholder, "aria-label": label, oninput });
   }
+
+  // Pasang validasi per field. rule(nilai) mengembalikan pesan galat atau "".
+  // Galat tampil setelah field disentuh (blur) atau setelah percobaan simpan.
+  function validated(input, rule) {
+    const id = "err-" + (++fieldSeq);
+    const err = h("p", { class: "field-error", id, hidden: true });
+    input.setAttribute("aria-describedby", id);
+    const apply = () => {
+      const msg = rule(input.value);
+      const showIt = Boolean(msg) && (input.dataset.touched === "1" || state.submitted);
+      input.classList.toggle("invalid", showIt);
+      input.setAttribute("aria-invalid", showIt ? "true" : "false");
+      err.textContent = showIt ? msg : "";
+      err.hidden = !showIt;
+    };
+    input.addEventListener("input", apply);
+    input.addEventListener("blur", () => { input.dataset.touched = "1"; apply(); });
+    apply();
+    return err;
+  }
+
+  const ruleNama = (v) => (v.trim() ? "" : "Nama buff tidak boleh kosong");
+  const ruleKode = (v) => (/^[0-9]+$/.test(v) ? "" : "Kode harus berupa angka");
+  const ruleLabel = (v) => (v.trim() ? "" : "Label tidak boleh kosong");
+  const ruleLandNama = (v) => (v.trim() ? "" : "Nama tidak boleh kosong");
 
   function renderBuff() {
     const groups = state.data.buff;
     const wrap = h("div");
+    const addBuff = () => {
+      groups.push({ nama: "", kode: [""] });
+      markDirty();
+      render(() => {
+        const heads = $("form").querySelectorAll(".group .group-head input");
+        return heads[heads.length - 1];
+      });
+    };
+    wrap.append(h("div", { class: "editor-toolbar" },
+      h("div", {}, h("strong", {}, "Daftar buff"), h("span", { class: "muted" }, " Tambahkan nama dan kode buff.")),
+      h("button", { type: "button", class: "add-button", onclick: addBuff }, "+ Tambah buff")
+    ));
     groups.forEach((g, gi) => {
+      const namaInput = textInput(g.nama, "Nama buff", "Nama buff", (e) => { g.nama = e.target.value; markDirty(); updatePreview(); });
+      const namaErr = validated(namaInput, ruleNama);
       const head = h("div", { class: "group-head" },
-        textInput(g.nama, "Nama buff", "Nama buff", (e) => { g.nama = e.target.value; markDirty(); updatePreview(); }),
+        namaInput,
+        h("span", { class: "code-count" }, `${g.kode.length} kode`),
         iconBtn("Naik", "↑", () => { move(groups, gi, -1); markDirty(); render(); }),
         iconBtn("Turun", "↓", () => { move(groups, gi, 1); markDirty(); render(); }),
-        iconBtn("Hapus buff", "✕", () => { groups.splice(gi, 1); markDirty(); render(); }, "danger")
+        iconBtn("Hapus buff", "✕", () => removeWithUndo(groups, gi, g.nama.trim() ? `Buff "${g.nama.trim()}" dihapus.` : "Buff dihapus."), "danger")
       );
-      const box = h("div", { class: "group" }, head);
+      const box = h("div", { class: "group" }, head, namaErr);
       g.kode.forEach((k, ki) => {
         const input = h("input", {
           type: "text", inputmode: "numeric", value: k, placeholder: "Kode (angka)", "aria-label": "Kode",
@@ -124,132 +202,271 @@
             markDirty(); updatePreview();
           }
         });
-        box.append(h("div", { class: "code-row" }, input,
-          iconBtn("Hapus kode", "✕", () => { g.kode.splice(ki, 1); markDirty(); render(); }, "danger")));
-        if (g.kode.length === 1) box.lastChild.lastChild.disabled = true;
+        const kodeErr = validated(input, ruleKode);
+        const del = iconBtn("Hapus kode", "✕", () => removeWithUndo(g.kode, ki, "Kode dihapus."), "danger");
+        if (g.kode.length === 1) del.disabled = true;
+        box.append(h("div", { class: "code-row" }, input, del), kodeErr);
       });
-      box.append(h("div", {}, h("button", { type: "button", onclick: () => { g.kode.push(""); markDirty(); render(".group:nth-child(" + (gi + 1) + ") .code-row:last-of-type input"); } }, "+ kode")));
+      box.append(h("div", {}, h("button", {
+        type: "button",
+        onclick: () => {
+          g.kode.push("");
+          markDirty();
+          render(() => {
+            const rows = $("form").querySelectorAll(".group")[gi].querySelectorAll(".code-row input");
+            return rows[rows.length - 1];
+          });
+        }
+      }, "+ kode")));
       wrap.append(box);
     });
-    wrap.append(h("button", { type: "button", class: "add-group", onclick: () => { groups.push({ nama: "", kode: [""] }); markDirty(); render(".group:last-of-type .group-head input"); } }, "+ Tambah buff"));
+    wrap.append(h("button", { type: "button", class: "add-button add-bottom", onclick: addBuff }, "+ Tambah buff"));
     return wrap;
   }
 
   function renderBuffland() {
     const rows = state.data.buffland;
     const wrap = h("div");
+    const addRow = () => {
+      rows.push({ label: "", nama: "" });
+      markDirty();
+      render(() => {
+        const labels = $("form").querySelectorAll(".land-row input:first-child");
+        return labels[labels.length - 1];
+      });
+    };
+    wrap.append(h("div", { class: "editor-toolbar" },
+      h("div", {}, h("strong", {}, "Daftar buffland"), h("span", { class: "muted" }, " Atur label dan nama buffland.")),
+      h("button", { type: "button", class: "add-button", onclick: addRow }, "+ Tambah baris")
+    ));
     rows.forEach((r, i) => {
-      wrap.append(h("div", { class: "land-row group" },
-        textInput(r.label, "Label (mis. MP)", "Label", (e) => { r.label = e.target.value; markDirty(); updatePreview(); }),
-        textInput(r.nama, "Nama", "Nama", (e) => { r.nama = e.target.value; markDirty(); updatePreview(); }),
-        iconBtn("Naik", "↑", () => { move(rows, i, -1); markDirty(); render(); }),
-        iconBtn("Turun", "↓", () => { move(rows, i, 1); markDirty(); render(); }),
-        iconBtn("Hapus baris", "✕", () => { rows.splice(i, 1); markDirty(); render(); }, "danger")
+      const labelInput = textInput(r.label, "Label (mis. MP)", "Label", (e) => { r.label = e.target.value; markDirty(); updatePreview(); });
+      const namaInput = textInput(r.nama, "Nama", "Nama", (e) => { r.nama = e.target.value; markDirty(); updatePreview(); });
+      const labelErr = validated(labelInput, ruleLabel);
+      const namaErr = validated(namaInput, ruleLandNama);
+      wrap.append(h("div", { class: "group" },
+        h("div", { class: "land-row" },
+          labelInput,
+          namaInput,
+          iconBtn("Naik", "↑", () => { move(rows, i, -1); markDirty(); render(); }),
+          iconBtn("Turun", "↓", () => { move(rows, i, 1); markDirty(); render(); }),
+          iconBtn("Hapus baris", "✕", () => removeWithUndo(rows, i, "Baris dihapus."), "danger")
+        ),
+        labelErr, namaErr
       ));
     });
-    wrap.append(h("button", { type: "button", class: "add-group", onclick: () => { rows.push({ label: "", nama: "" }); markDirty(); render(".land-row:last-of-type input"); } }, "+ Tambah baris"));
+    wrap.append(h("button", { type: "button", class: "add-button add-bottom", onclick: addRow }, "+ Tambah baris"));
     return wrap;
   }
 
   function renderTabs() {
     const nav = $("tabs");
     nav.replaceChildren(...TABS.map((t) => h("button", {
-      type: "button", class: "tab", role: "tab", "aria-selected": String(t.id === state.tab),
-      onclick: () => { state.tab = t.id; setMsg($("msg"), ""); render(); }
+      type: "button", class: "tab", role: "tab", "data-tab": t.id, "aria-selected": String(t.id === state.tab),
+      onclick: () => {
+        if (state.tab === t.id) return;
+        state.tab = t.id; state.submitted = false; clearToast(); setMsg($("msg"), ""); render();
+      }
     }, h("span", {}, t.title), h("span", { class: "tab-count" }, String(t.id === "buff" ? (state.data.buff || []).length : (state.data.buffland || []).length)))));
   }
 
-  function render(focusSelector) {
+  // focusTarget: fungsi yang mengembalikan elemen untuk difokuskan (dan digulir ke tengah layar).
+  function render(focusTarget) {
     renderTabs();
     updatePageInfo();
     $("form").replaceChildren(state.tab === "buff" ? renderBuff() : renderBuffland());
-    $("dirty").hidden = !state.dirty[state.tab];
+    refreshDirty();
     updatePreview();
-    if (focusSelector) {
-      const el = $("form").querySelector(focusSelector);
-      if (el) el.focus();
+    if (focusTarget) {
+      const el = focusTarget();
+      if (el) {
+        el.focus({ preventScroll: true });
+        el.scrollIntoView({ block: "center", behavior: "smooth" });
+      }
     }
   }
 
   // ---- validasi sisi klien (server tetap memvalidasi ulang) ----
-  function validate(tab) {
+  function countProblems(tab) {
+    let n = 0;
     if (tab === "buff") {
       for (const g of state.data.buff) {
-        if (!g.nama.trim()) return "Ada nama buff yang kosong";
-        for (const k of g.kode) if (!/^[0-9]+$/.test(k)) return `Kode "${g.nama}" harus berupa angka dan tidak boleh kosong`;
+        if (ruleNama(g.nama)) n++;
+        for (const k of g.kode) if (ruleKode(k)) n++;
       }
     } else {
-      for (const r of state.data.buffland) if (!r.label.trim() || !r.nama.trim()) return "Label dan nama buffland tidak boleh kosong";
+      for (const r of state.data.buffland) {
+        if (ruleLabel(r.label)) n++;
+        if (ruleLandNama(r.nama)) n++;
+      }
     }
-    return null;
+    return n;
   }
 
   async function save() {
-    if (state.busy) return;
+    if (state.busy || !isDirty(state.tab)) return;
     const tab = state.tab;
-    const galat = validate(tab);
-    if (galat) return setMsg($("msg"), galat, "err");
+    const problems = countProblems(tab);
+    if (problems) {
+      state.submitted = true;
+      render(() => $("form").querySelector(".invalid"));
+      return setMsg($("msg"), `${problems} isian perlu diperbaiki sebelum disimpan.`, "err");
+    }
     state.busy = true;
-    $("save").disabled = true;
-    setMsg($("msg"), "Menyimpan…");
+    $("save").textContent = "Menyimpan…";
+    refreshDirty();
+    setMsg($("msg"), "");
     try {
       await api.save(tab, toRows(tab), state.pin);
       load(tab, await api.readAdmin(tab, state.pin));
+      state.submitted = false;
+      clearToast();
       render();
-      setMsg($("msg"), "Tersimpan. Bot memakai data baru paling lambat 5 menit lagi.", "ok");
+      toast("Tersimpan. Bot memakai data baru paling lambat 5 menit lagi.", { kind: "ok", ms: 6000 });
     } catch (e) {
       setMsg($("msg"), e.message, "err");
     } finally {
       state.busy = false;
-      $("save").disabled = false;
+      $("save").textContent = "Simpan";
+      refreshDirty();
+    }
+  }
+
+  // Batalkan butuh dua klik agar perubahan tidak hilang tanpa sengaja.
+  let discardTimer;
+  function resetDiscard() {
+    clearTimeout(discardTimer);
+    $("discard").textContent = "Batalkan";
+    $("discard").classList.remove("danger");
+  }
+
+  function discard() {
+    const btn = $("discard");
+    if (!btn.classList.contains("danger")) {
+      btn.textContent = "Klik lagi untuk batalkan";
+      btn.classList.add("danger");
+      discardTimer = setTimeout(resetDiscard, 3000);
+      return;
+    }
+    resetDiscard();
+    state.data[state.tab] = JSON.parse(state.orig[state.tab]);
+    state.submitted = false;
+    clearToast();
+    setMsg($("msg"), "");
+    render();
+    toast("Perubahan dibatalkan.");
+  }
+
+  async function copyPreview() {
+    const text = $("preview").textContent;
+    try {
+      await navigator.clipboard.writeText(text);
+      toast("Pesan disalin.", { kind: "ok" });
+    } catch (e) {
+      const sel = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents($("preview"));
+      sel.removeAllRanges();
+      sel.addRange(range);
+      toast("Tidak bisa menyalin otomatis. Teks sudah dipilih, tekan Ctrl+C.");
     }
   }
 
   async function loadAll() {
     const results = await Promise.all(TABS.map((t) => api.readAdmin(t.id, state.pin)));
     TABS.forEach((t, i) => load(t.id, results[i]));
+    state.submitted = false;
     render();
     show("editor");
   }
 
   function logout() {
+    if (Object.values(TABS).some((t) => isDirty(t.id)) && !window.confirm("Ada perubahan yang belum disimpan. Tetap keluar?")) return;
     state.pin = "";
     state.data = {};
+    state.orig = {};
+    clearToast();
     storage((s) => s.removeItem(PIN_KEY));
     $("pin").value = "";
+    setPinVisible(false);
+    setMsg($("login-msg"), "");
+    clearPinInvalid();
     show("login");
     $("pin").focus();
+  }
+
+  function setPinVisible(visible) {
+    $("pin").type = visible ? "text" : "password";
+    const btn = $("pin-toggle");
+    btn.textContent = visible ? "Sembunyikan" : "Tampilkan";
+    btn.setAttribute("aria-pressed", String(visible));
+    btn.setAttribute("aria-label", visible ? "Sembunyikan PIN" : "Tampilkan PIN");
+  }
+
+  function clearPinInvalid() {
+    $("pin").classList.remove("invalid");
+    $("pin").setAttribute("aria-invalid", "false");
+  }
+
+  function setLoginBusy(busy) {
+    $("login-btn").disabled = busy;
+    $("login-spinner").hidden = !busy;
+    $("login-btn-text").textContent = busy ? "Memeriksa…" : "Masuk";
   }
 
   async function onLogin(e) {
     e.preventDefault();
     const pin = $("pin").value;
-    $("login-btn").disabled = true;
-    setMsg($("login-msg"), "Memeriksa…");
+    if (!pin) {
+      setMsg($("login-msg"), "Masukkan PIN terlebih dahulu.", "err");
+      $("pin").classList.add("invalid");
+      $("pin").setAttribute("aria-invalid", "true");
+      $("pin").focus();
+      return;
+    }
+    setLoginBusy(true);
+    clearPinInvalid();
+    setMsg($("login-msg"), "");
     try {
       await api.login(pin);
       state.pin = pin;
       storage((s) => s.setItem(PIN_KEY, pin));
+      show("loading");
       await loadAll();
-      setMsg($("login-msg"), "");
     } catch (err) {
       state.pin = "";
+      show("login");
       setMsg($("login-msg"), err.message, "err");
+      $("pin").classList.add("invalid");
+      $("pin").setAttribute("aria-invalid", "true");
+      $("pin").focus();
+      $("pin").select();
     } finally {
-      $("login-btn").disabled = false;
+      setLoginBusy(false);
     }
   }
 
   async function init() {
     $("login-form").addEventListener("submit", onLogin);
+    $("pin").addEventListener("input", () => { clearPinInvalid(); setMsg($("login-msg"), ""); });
+    $("pin-toggle").addEventListener("click", () => setPinVisible($("pin").type === "password"));
     $("logout").addEventListener("click", logout);
     $("save").addEventListener("click", save);
+    $("discard").addEventListener("click", discard);
+    $("copy").addEventListener("click", copyPreview);
+    document.addEventListener("keydown", (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+        e.preventDefault();
+        if (!$("editor").hidden) save();
+      }
+    });
     window.addEventListener("beforeunload", (e) => {
-      if (Object.values(state.dirty).some(Boolean)) { e.preventDefault(); e.returnValue = ""; }
+      if (TABS.some((t) => isDirty(t.id))) { e.preventDefault(); e.returnValue = ""; }
     });
     const saved = storage((s) => s.getItem(PIN_KEY));
     if (saved) {
       state.pin = saved;
+      show("loading");
       try { await loadAll(); return; } catch (e) { state.pin = ""; storage((s) => s.removeItem(PIN_KEY)); }
     }
     show("login");
