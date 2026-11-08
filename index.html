@@ -9,8 +9,10 @@
 <body>
   <main id="app">
     <section id="login" class="card login" hidden>
+      <div class="brand-mark" aria-hidden="true">F</div>
+      <p class="eyebrow">Pusat kontrol bot</p>
       <h1>Master Data Fuuka</h1>
-      <p class="muted">Masukkan PIN untuk mengubah data bot.</p>
+      <p class="muted">Kelola data buff dan buffland dengan aman dari satu tempat.</p>
       <form id="login-form" autocomplete="off">
         <label for="pin">PIN</label>
         <input id="pin" type="password" inputmode="numeric" autocomplete="current-password" required>
@@ -21,12 +23,25 @@
 
     <section id="editor" hidden>
       <header class="bar">
-        <h1>Master Data Fuuka</h1>
+        <div class="brand">
+          <div class="brand-mark small" aria-hidden="true">F</div>
+          <div>
+            <p class="eyebrow">Pusat kontrol bot</p>
+            <h1>Master Data Fuuka</h1>
+          </div>
+        </div>
         <button type="button" id="logout" class="ghost">Keluar</button>
       </header>
+      <div class="intro">
+        <div>
+          <h2 id="page-title">Kode buff</h2>
+          <p id="page-help" class="muted">Atur nama buff dan kode yang digunakan bot.</p>
+        </div>
+        <div class="stat" aria-live="polite"><strong id="item-count">0</strong><span id="item-label">kelompok buff</span></div>
+      </div>
       <nav id="tabs" class="tabs" role="tablist" aria-label="Topik"></nav>
       <div class="grid">
-        <div class="card">
+        <div class="card editor-card">
           <div id="form"></div>
           <div class="actions">
             <button type="button" id="save" class="primary">Simpan</button>
@@ -34,8 +49,15 @@
           </div>
           <p id="msg" class="msg" role="status" aria-live="polite"></p>
         </div>
-        <aside class="card">
-          <h2>Preview pesan WA</h2>
+        <aside class="card preview-card">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Tampilan akhir</p>
+              <h2>Preview pesan WA</h2>
+            </div>
+            <span class="live-dot">Live</span>
+          </div>
+          <p class="muted preview-help">Preview berubah otomatis saat data diedit.</p>
           <pre id="preview" class="preview"></pre>
         </aside>
       </div>

@@ -79,6 +79,17 @@
     $("preview").textContent = buildBuffBody(buff, land);
   }
 
+  function updatePageInfo() {
+    const isBuff = state.tab === "buff";
+    const count = isBuff ? state.data.buff.length : state.data.buffland.length;
+    $("page-title").textContent = isBuff ? "Kode buff" : "Code buffland";
+    $("page-help").textContent = isBuff
+      ? "Atur nama buff dan kode yang digunakan bot."
+      : "Atur label dan nama untuk blok code buffland.";
+    $("item-count").textContent = count;
+    $("item-label").textContent = isBuff ? "kelompok buff" : "baris buffland";
+  }
+
   function move(arr, i, d) {
     const j = i + d;
     if (j < 0 || j >= arr.length) return;
@@ -145,11 +156,12 @@
     nav.replaceChildren(...TABS.map((t) => h("button", {
       type: "button", class: "tab", role: "tab", "aria-selected": String(t.id === state.tab),
       onclick: () => { state.tab = t.id; setMsg($("msg"), ""); render(); }
-    }, t.title)));
+    }, h("span", {}, t.title), h("span", { class: "tab-count" }, String(t.id === "buff" ? (state.data.buff || []).length : (state.data.buffland || []).length)))));
   }
 
   function render(focusSelector) {
     renderTabs();
+    updatePageInfo();
     $("form").replaceChildren(state.tab === "buff" ? renderBuff() : renderBuffland());
     $("dirty").hidden = !state.dirty[state.tab];
     updatePreview();
