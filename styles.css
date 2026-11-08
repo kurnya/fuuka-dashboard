@@ -90,3 +90,7 @@ input.invalid { border-color:var(--err)!important; } input.invalid:focus-visible
 .tagline { color:var(--text); font-size:1.02rem; font-weight:650; line-height:1.4; margin:2px 0 0; }
 .login #login-msg, .login .login-hint { text-align:center; width:100%; } .login #login-msg:empty { display:none; }
 @media (max-width:600px) { .bar { margin-top:-20px; padding:12px 0 10px; } }
+
+/* HP: badge jumlah kode tidak melar; baris kedua berisi badge di kiri dan tombol aksi di kanan. */
+.code-count { align-self:center; line-height:1.2; }
+@media (max-width:600px) { .group-head { align-items:center; } .group-head .code-count { margin-right:auto; } }
