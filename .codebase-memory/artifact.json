@@ -1,0 +1,12 @@
+{
+    "schema_version": 2,
+    "commit": "eceb92bb56582b78c38dbd713ef11ca5ac7e12ff",
+    "indexed_at": "2026-11-09T14:33:02Z",
+    "project": "fuuka-dashboard",
+    "nodes": 143,
+    "edges": 338,
+    "original_size": 3014656,
+    "compressed_size": 221887,
+    "compression_level": 9,
+    "reconcile_basis": "git-clean-head"
+}

@@ -1,6 +1,6 @@
 # Master Data Fuuka
 
-Dashboard untuk mengubah isi data bot Fuuka (ForceknightBot) tanpa menyentuh kode. Data disimpan di Google Spreadsheet **Master Data Fuuka**, diakses lewat Apps Script Web App. Tahap pertama: topik `#3` (Kode Buff).
+Dashboard untuk mengubah isi data bot Fuuka (ForceknightBot) tanpa menyentuh kode. Data disimpan di Google Spreadsheet **Master Data Fuuka**, diakses lewat Apps Script Web App. Dashboard mengelola topik `#3`, `#12`, dan `#13`.
 
 ```
 Dashboard (GitHub Pages) ──POST (PIN)──► Apps Script ◄──GET read── Bot WA
@@ -12,7 +12,7 @@ Dashboard (GitHub Pages) ──POST (PIN)──► Apps Script ◄──GET read
 
 1. Buka spreadsheet **Master Data Fuuka**, lalu **Ekstensi → Apps Script**.
 2. Buat dua file dan tempel isinya: `apps-script/Logic.gs` dan `apps-script/Code.gs`.
-3. Pilih fungsi `setup` lalu **Run**, dan setujui izin akses. Ini membuat tab `buff` dan `buffland` beserta isi awal (sama dengan teks `#3` lama). Tab yang sudah berisi tidak ditimpa.
+3. Pilih fungsi `setup` lalu **Run**, dan setujui izin akses. Ini membuat tab `buff`, `buffland`, `xtallMaster`, dan `xtallEvent` beserta isi awal. Tab yang sudah berisi tidak ditimpa.
 4. **Setelan Proyek (ikon roda gigi) → Properti skrip → Tambah properti**: nama `DASHBOARD_PIN`, nilai PIN pilihanmu. PIN **tidak** disimpan di sheet. Pakai PIN **minimal 8 karakter** (campur huruf dan angka lebih baik): URL `/exec` publik, jadi panjang PIN adalah pertahanan utama terhadap tebakan massal.
 5. **Deploy → Deployment baru → Web app**. Execute as: **Me**. Who has access: **Anyone**. Salin URL yang berakhiran `/exec`.
 6. Isi `API_URL` di [config.js](config.js) dengan URL itu.
@@ -29,6 +29,7 @@ Push repo ini ke GitHub, lalu **Settings → Pages → Deploy from a branch → 
 - Buka dashboard, masukkan PIN.
 - Tab **Kode Buff**: ubah nama dan kode, tambah kode pada nama yang sama (mis. DTE), geser urutan, hapus. Kode hanya angka.
 - Tab **Code Buffland**: label dan nama untuk blok "Code buffland member/admin".
+- Tab **Xtall Master** dan **Xtall Event**: satu baris per baris pesan; baris kosong dipertahankan sebagai pemisah.
 - Panel **Preview** menampilkan isi pesan WA seperti yang akan dilihat guild.
 - Klik **Simpan**. Bot memakai data baru paling lambat **5 menit** kemudian (cache bot).
 

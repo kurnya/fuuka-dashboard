@@ -2,7 +2,9 @@
 (function () {
   const TABS = [
     { id: "buff", title: "Kode Buff" },
-    { id: "buffland", title: "Code Buffland" }
+    { id: "buffland", title: "Code Buffland" },
+    { id: "xtallMaster", title: "Xtall Master" },
+    { id: "xtallEvent", title: "Xtall Event" }
   ];
   const PIN_KEY = "fuuka_pin";
 
@@ -50,11 +52,16 @@
       for (const g of state.data.buff) for (const k of g.kode) rows.push({ urutan: rows.length + 1, nama: g.nama, kode: k });
       return rows;
     }
-    return state.data.buffland.map((r, i) => ({ urutan: i + 1, label: r.label, nama: r.nama }));
+    if (tab === "buffland") return state.data.buffland.map((r, i) => ({ urutan: i + 1, label: r.label, nama: r.nama }));
+    return state.data[tab].map((isi, i) => ({ urutan: i + 1, isi }));
   }
 
   function load(tab, rows) {
-    state.data[tab] = tab === "buff" ? toGroups(rows) : rows.map((r) => ({ label: r.label, nama: r.nama }));
+    state.data[tab] = tab === "buff"
+      ? toGroups(rows)
+      : tab === "buffland"
+        ? rows.map((r) => ({ label: r.label, nama: r.nama }))
+        : rows.map((r) => r.isi || "");
     state.orig[tab] = JSON.stringify(state.data[tab]);
   }
 
@@ -107,6 +114,10 @@
   }
 
   function updatePreview() {
+    if (state.tab === "xtallMaster" || state.tab === "xtallEvent") {
+      $("preview").textContent = state.data[state.tab].join("\n");
+      return;
+    }
     const buff = toRows("buff").filter((r) => r.nama.trim() && r.kode);
     const land = toRows("buffland").filter((r) => r.label.trim() && r.nama.trim());
     $("preview").textContent = buildBuffBody(buff, land);
@@ -114,10 +125,13 @@
 
   function updatePageInfo() {
     const isBuff = state.tab === "buff";
-    $("page-title").textContent = isBuff ? "Kode buff" : "Code buffland";
+    const isLand = state.tab === "buffland";
+    $("page-title").textContent = isBuff ? "Kode buff" : isLand ? "Code buffland" : TABS.find((t) => t.id === state.tab).title;
     $("page-help").textContent = isBuff
       ? "Atur nama buff dan kode yang digunakan bot."
-      : "Atur label dan nama untuk blok code buffland.";
+      : isLand
+        ? "Atur label dan nama untuk blok code buffland."
+        : "Atur baris teks yang dikirim untuk topik ini.";
   }
 
   function move(arr, i, d) {
@@ -259,6 +273,29 @@
     return wrap;
   }
 
+  function renderXtall() {
+    const lines = state.data[state.tab];
+    const wrap = h("div");
+    const addLine = () => {
+      lines.push("");
+      markDirty();
+      render(() => {
+        const inputs = $("form").querySelectorAll(".topic-line input");
+        return inputs[inputs.length - 1];
+      });
+    };
+    wrap.append(h("div", { class: "editor-toolbar" },
+      h("div", {}, h("strong", {}, "Daftar baris"), h("span", { class: "muted" }, " Edit teks, pemisah, atau baris kosong.")),
+      h("button", { type: "button", class: "add-button", onclick: addLine }, "+ Tambah baris")
+    ));
+    lines.forEach((line, i) => {
+      const input = textInput(line, "Teks baris (kosong = pemisah)", "Isi baris", (e) => { lines[i] = e.target.value; markDirty(); updatePreview(); });
+      wrap.append(h("div", { class: "topic-line" }, input, iconBtn("Hapus baris", "✕", () => removeWithUndo(lines, i, "Baris dihapus."), "danger")));
+    });
+    wrap.append(h("button", { type: "button", class: "add-button add-bottom", onclick: addLine }, "+ Tambah baris"));
+    return wrap;
+  }
+
   function renderTabs() {
     const nav = $("tabs");
     nav.replaceChildren(...TABS.map((t) => h("button", {
@@ -267,14 +304,16 @@
         if (state.tab === t.id) return;
         state.tab = t.id; state.submitted = false; clearToast(); setMsg($("msg"), ""); render();
       }
-    }, h("span", {}, t.title), h("span", { class: "tab-count" }, String(t.id === "buff" ? (state.data.buff || []).length : (state.data.buffland || []).length)))));
+      }, h("span", {}, t.title), h("span", { class: "tab-count" }, String((state.data[t.id] || []).length)))));
   }
 
   // focusTarget: fungsi yang mengembalikan elemen untuk difokuskan (dan digulir ke tengah layar).
   function render(focusTarget) {
     renderTabs();
     updatePageInfo();
-    $("form").replaceChildren(state.tab === "buff" ? renderBuff() : renderBuffland());
+    $("form").replaceChildren(
+      state.tab === "buff" ? renderBuff() : state.tab === "buffland" ? renderBuffland() : renderXtall()
+    );
     refreshDirty();
     updatePreview();
     if (focusTarget) {
@@ -294,11 +333,13 @@
         if (ruleNama(g.nama)) n++;
         for (const k of g.kode) if (ruleKode(k)) n++;
       }
-    } else {
+    } else if (tab === "buffland") {
       for (const r of state.data.buffland) {
         if (ruleLabel(r.label)) n++;
         if (ruleLandNama(r.nama)) n++;
       }
+    } else if (state.data[tab].length === 0) {
+      n++;
     }
     return n;
   }

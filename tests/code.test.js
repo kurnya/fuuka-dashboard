@@ -9,14 +9,18 @@ function baru() {
   return env;
 }
 
-test("setup(): membuat tab buff dan buffland dengan seed, aman dijalankan ulang", () => {
+test("setup(): membuat semua tab master dengan seed, aman dijalankan ulang", () => {
   const { ctx, sheets, get } = baru();
-  assert.deepEqual(sheets.map((s) => s.name), ["buff", "buffland"]);
+  assert.deepEqual(sheets.map((s) => s.name), ["buff", "buffland", "xtallMaster", "xtallEvent"]);
   assert.deepEqual(get("buff").data[0], ["urutan", "nama", "kode"]);
   assert.equal(get("buff").data[1][1], "Max HP");
   // Seed memuat semua kode, termasuk DTE yang punya banyak kode (25 nama, 35 kode).
   assert.equal(get("buff").data.length - 1, 35);
   assert.equal(get("buffland").data.length - 1, 4);
+  assert.equal(get("xtallMaster").data[0][1], "isi");
+  assert.match(get("xtallMaster").data[2][1], /Xtall Master/);
+  assert.equal(get("xtallEvent").data[0][1], "isi");
+  assert.match(get("xtallEvent").data[2][1], /List Xtall Event/);
   get("buff").data[1][2] = "999";
   ctx.setup();
   assert.equal(get("buff").data[1][2], "999", "isi yang sudah ada tidak ditimpa");

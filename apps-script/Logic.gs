@@ -3,7 +3,9 @@
 
 var TAB_SCHEMAS = {
   buff: ['urutan', 'nama', 'kode'],
-  buffland: ['urutan', 'label', 'nama']
+  buffland: ['urutan', 'label', 'nama'],
+  xtallMaster: ['urutan', 'isi'],
+  xtallEvent: ['urutan', 'isi']
 };
 
 var MAX_PERCOBAAN = 5;
@@ -64,7 +66,7 @@ function validateRows(tab, rows) {
       if (!/^[0-9]+$/.test(String(r.kode === undefined || r.kode === null ? '' : r.kode))) {
         return no + 'kode harus berupa angka saja';
       }
-    } else {
+    } else if (tab === 'buffland') {
       if (teks_(r.label) === '') return no + 'label tidak boleh kosong';
       if (teks_(r.nama) === '') return no + 'nama tidak boleh kosong';
     }

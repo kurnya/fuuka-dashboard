@@ -12,9 +12,11 @@ function muat() {
 }
 const L = muat();
 
-test("isAllowedTab: hanya buff dan buffland", () => {
+test("isAllowedTab: hanya tab master data yang dikenal", () => {
   assert.equal(L.isAllowedTab("buff"), true);
   assert.equal(L.isAllowedTab("buffland"), true);
+  assert.equal(L.isAllowedTab("xtallMaster"), true);
+  assert.equal(L.isAllowedTab("xtallEvent"), true);
   assert.equal(L.isAllowedTab("rahasia"), false);
   assert.equal(L.isAllowedTab(undefined), false);
 });
@@ -40,6 +42,13 @@ test("parseRows: urutan sama tetap stabil menurut posisi baris", () => {
 test("parseRows buffland", () => {
   const out = L.parseRows("buffland", [["urutan", "label", "nama"], [1, "MP", "punkz"]]);
   assert.deepEqual(JSON.parse(JSON.stringify(out)), [{ urutan: 1, label: "MP", nama: "punkz" }]);
+});
+
+test("parseRows xtall mempertahankan baris kosong", () => {
+  const out = L.parseRows("xtallMaster", [["urutan", "isi"], [1, "Judul"], [2, ""], [3, "Isi"]]);
+  assert.deepEqual(JSON.parse(JSON.stringify(out)), [
+    { urutan: 1, isi: "Judul" }, { urutan: 2, isi: "" }, { urutan: 3, isi: "Isi" }
+  ]);
 });
 
 test("validateRows buff: valid mengembalikan null", () => {
@@ -72,6 +81,10 @@ test("validateRows buffland: label atau nama kosong ditolak", () => {
 test("validateRows: tab tidak dikenal dan rows bukan array ditolak", () => {
   assert.ok(L.validateRows("rahasia", []));
   assert.ok(L.validateRows("buff", "bukan array"));
+});
+
+test("validateRows xtall mengizinkan isi kosong untuk pemisah", () => {
+  assert.equal(L.validateRows("xtallMaster", [{ urutan: 1, isi: "" }]), null);
 });
 
 test("rowsToValues: header + nomor urutan dihitung ulang 1..n", () => {
