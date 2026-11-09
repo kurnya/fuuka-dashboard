@@ -4,7 +4,8 @@
     { id: "buff", title: "Kode Buff" },
     { id: "buffland", title: "Code Buffland" },
     { id: "xtallMaster", title: "Xtall Master" },
-    { id: "xtallEvent", title: "Xtall Event" }
+    { id: "xtallEvent", title: "Xtall Event" },
+    { id: "mq", title: "Bahan MQ" }
   ];
   const PIN_KEY = "fuuka_pin";
 
@@ -114,7 +115,7 @@
   }
 
   function updatePreview() {
-    if (state.tab === "xtallMaster" || state.tab === "xtallEvent") {
+    if (state.tab !== "buff" && state.tab !== "buffland") {
       $("preview").textContent = state.data[state.tab].join("\n");
       return;
     }

@@ -17,6 +17,7 @@ test("isAllowedTab: hanya tab master data yang dikenal", () => {
   assert.equal(L.isAllowedTab("buffland"), true);
   assert.equal(L.isAllowedTab("xtallMaster"), true);
   assert.equal(L.isAllowedTab("xtallEvent"), true);
+  assert.equal(L.isAllowedTab("mq"), true);
   assert.equal(L.isAllowedTab("rahasia"), false);
   assert.equal(L.isAllowedTab(undefined), false);
 });
@@ -48,6 +49,13 @@ test("parseRows xtall mempertahankan baris kosong", () => {
   const out = L.parseRows("xtallMaster", [["urutan", "isi"], [1, "Judul"], [2, ""], [3, "Isi"]]);
   assert.deepEqual(JSON.parse(JSON.stringify(out)), [
     { urutan: 1, isi: "Judul" }, { urutan: 2, isi: "" }, { urutan: 3, isi: "Isi" }
+  ]);
+});
+
+test("parseRows mq mempertahankan baris teks", () => {
+  const out = L.parseRows("mq", [["urutan", "isi"], [1, "*BAB 1 :*"], [2, ""]]);
+  assert.deepEqual(JSON.parse(JSON.stringify(out)), [
+    { urutan: 1, isi: "*BAB 1 :*" }, { urutan: 2, isi: "" }
   ]);
 });
 

@@ -324,6 +324,55 @@ var SEED_XTALL_EVENT = [
   "",
   "━━━━━━━━━━━━━━━━━━━━",
 ];
+var SEED_MQ = [
+  "━━━━━━━━━━━━━━━━━━━━",
+  "BAHAN MQ",
+  "━━━━━━━━━━━━━━━━━━━━",
+  "",
+  "Catatan: MQ adalah Main Quest atau Quest Utama.",
+  "",
+  "*BAB 1 :*",
+  "- Daun Colon (Colon Leaf) x5",
+  "- Sisik Naga (Hard Dragon Skin) x2",
+  "- Daging Domba (Lamb Meat) x1",
+  "- Sulur (Vine) x3",
+  "- Paruh Tebal (Thick Beak) x3",
+  "- Sayap Peri (Fairy Feather) x3",
+  "",
+  "*BAB 2 :*",
+  "- Koin Ksatria (Swordsman Stone Coin) x20",
+  "",
+  "*BAB 3 :*",
+  "- Daging Tikus Pasir (Sand Mole Meat) x1",
+  "- Cakar Binatang Buas (Beast Claw) x3",
+  "- Kulit Kodok Pasir (Sand Frog Skin) x5",
+  "- Taring Bergerigi (Jagged Fang) x10",
+  "- Kristal Saham (Saham Crystal) x5",
+  "- Permata Jiwa (Spiritual Gemstone) x1",
+  "",
+  "*BAB 8 :*",
+  "- Anggur Rokoko (Rokoko Grape) x5",
+  "",
+  "*BAB 9 :*",
+  "- Kayu Labilans (Labilans Wood) x10",
+  "",
+  "*BAB 11 :*",
+  "- Tanduk Patah (Broken Horn) x20",
+  "",
+  "*BAB 12 :*",
+  "- Biji Berkembang (Growing Ore) x5",
+  "- Batu Jabali (Jabali Stone) x5",
+  "",
+  "*BAB 14 :*",
+  "- Kulit Tebal Berlendir (Slimy Thick Skin) x20",
+  "- Akar Melilit (Tangled Roots) x10",
+  "- Kayu Menabra (Menabra Wood) x10",
+  "",
+  "*BAB 15 :*",
+  "- Pupuk Keruh (Stagnant Fertilizer) x10",
+  "",
+  "━━━━━━━━━━━━━━━━━━━━"
+];
 
 function nowMs_() {
   return Date.now();
@@ -350,7 +399,7 @@ function seedRows_(tab) {
       rows.push({ urutan: i + 1, label: b[0], nama: b[1] });
     });
   } else {
-    var lines = tab === 'xtallMaster' ? SEED_XTALL_MASTER : SEED_XTALL_EVENT;
+    var lines = tab === 'xtallMaster' ? SEED_XTALL_MASTER : tab === 'xtallEvent' ? SEED_XTALL_EVENT : SEED_MQ;
     lines.forEach(function (isi, i) {
       rows.push({ urutan: i + 1, isi: isi });
     });

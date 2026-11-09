@@ -5,7 +5,8 @@ var TAB_SCHEMAS = {
   buff: ['urutan', 'nama', 'kode'],
   buffland: ['urutan', 'label', 'nama'],
   xtallMaster: ['urutan', 'isi'],
-  xtallEvent: ['urutan', 'isi']
+  xtallEvent: ['urutan', 'isi'],
+  mq: ['urutan', 'isi']
 };
 
 var MAX_PERCOBAAN = 5;
