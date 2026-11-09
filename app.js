@@ -291,7 +291,12 @@
     ));
     lines.forEach((line, i) => {
       const input = textInput(line, "Teks baris (kosong = pemisah)", "Isi baris", (e) => { lines[i] = e.target.value; markDirty(); updatePreview(); });
-      wrap.append(h("div", { class: "topic-line" }, input, iconBtn("Hapus baris", "✕", () => removeWithUndo(lines, i, "Baris dihapus."), "danger")));
+      wrap.append(h("div", { class: "topic-line" },
+        input,
+        iconBtn("Naik", "↑", () => { move(lines, i, -1); markDirty(); render(); }),
+        iconBtn("Turun", "↓", () => { move(lines, i, 1); markDirty(); render(); }),
+        iconBtn("Hapus baris", "✕", () => removeWithUndo(lines, i, "Baris dihapus."), "danger")
+      ));
     });
     wrap.append(h("button", { type: "button", class: "add-button add-bottom", onclick: addLine }, "+ Tambah baris"));
     return wrap;
